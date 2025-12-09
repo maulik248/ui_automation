@@ -1,0 +1,35 @@
+{
+  "name": "synack-playwright-framework",
+  "version": "2.0.0",
+  "description": "AI-Enhanced Playwright Testing Framework with Smart Locators, Self-Healing Tests, and Auto-Generation",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:iqm": "playwright test --config=playwright.iqm.config.js",
+    "test:iqm:ui": "playwright test --config=playwright.iqm.config.js --ui",
+    "test:iqm:headed": "playwright test --config=playwright.iqm.config.js --headed",
+    "test:synack": "playwright test --config=playwright.config.js",
+    "test:debug": "playwright test --config=playwright.iqm.config.js --debug",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen",
+    "codegen:iqm": "playwright codegen https://apitesting.stage.iqm.com/"
+  },
+  "keywords": [
+    "playwright",
+    "testing",
+    "automation",
+    "ai",
+    "self-healing",
+    "test-generation",
+    "qa"
+  ],
+  "author": "Maulik Shah (Extended from Nadya Koltakova's framework)",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  }
+}
