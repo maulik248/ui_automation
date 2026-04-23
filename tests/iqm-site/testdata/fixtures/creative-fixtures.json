@@ -1,0 +1,184 @@
+{
+  "validCreatives": {
+    "imageCreative": {
+      "name": "Sample Image Creative",
+      "type": "image",
+      "format": "jpg",
+      "width": 300,
+      "height": 250,
+      "fileSize": 102400,
+      "duration": null,
+      "description": "A valid image creative for testing"
+    },
+    "videoCreative": {
+      "name": "Sample Video Creative",
+      "type": "video",
+      "format": "mp4",
+      "width": 1920,
+      "height": 1080,
+      "fileSize": 5242880,
+      "duration": 30,
+      "description": "A valid video creative for testing"
+    },
+    "audioCreative": {
+      "name": "Sample Audio Creative",
+      "type": "audio",
+      "format": "wav",
+      "width": null,
+      "height": null,
+      "fileSize": 1048576,
+      "duration": 60,
+      "description": "A valid audio creative for testing"
+    },
+    "htmlCreative": {
+      "name": "Sample HTML Creative",
+      "type": "html",
+      "format": "html",
+      "width": 728,
+      "height": 90,
+      "fileSize": 51200,
+      "duration": null,
+      "description": "A valid HTML creative for testing"
+    }
+  },
+  "invalidCreatives": {
+    "missingName": {
+      "type": "image",
+      "format": "jpg",
+      "width": 300,
+      "height": 250,
+      "fileSize": 102400
+    },
+    "invalidFormat": {
+      "name": "Invalid Format Creative",
+      "type": "image",
+      "format": "xyz",
+      "width": 300,
+      "height": 250,
+      "fileSize": 102400
+    },
+    "oversizedFile": {
+      "name": "Oversized Creative",
+      "type": "image",
+      "format": "jpg",
+      "width": 300,
+      "height": 250,
+      "fileSize": 104857600
+    },
+    "invalidDimensions": {
+      "name": "Invalid Dimensions Creative",
+      "type": "image",
+      "format": "jpg",
+      "width": 0,
+      "height": 0,
+      "fileSize": 102400
+    }
+  },
+  "edgeCaseCreatives": {
+    "minimumSize": {
+      "name": "Minimum Size Creative",
+      "type": "image",
+      "format": "jpg",
+      "width": 1,
+      "height": 1,
+      "fileSize": 1024,
+      "description": "Minimum valid dimensions"
+    },
+    "maximumSize": {
+      "name": "Maximum Size Creative",
+      "type": "video",
+      "format": "mp4",
+      "width": 4096,
+      "height": 2160,
+      "fileSize": 52428800,
+      "duration": 3600,
+      "description": "Maximum valid dimensions"
+    },
+    "specialCharactersName": {
+      "name": "Creative with @#$%^&*() Special Chars",
+      "type": "image",
+      "format": "jpg",
+      "width": 300,
+      "height": 250,
+      "fileSize": 102400
+    },
+    "unicodeName": {
+      "name": "Creative with 中文 Unicode Characters",
+      "type": "image",
+      "format": "jpg",
+      "width": 300,
+      "height": 250,
+      "fileSize": 102400
+    },
+    "veryLongName": {
+      "name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "type": "image",
+      "format": "jpg",
+      "width": 300,
+      "height": 250,
+      "fileSize": 102400
+    }
+  },
+  "bulkCreatives": {
+    "batch1": [
+      {
+        "name": "Bulk Creative 1",
+        "type": "image",
+        "format": "jpg",
+        "width": 300,
+        "height": 250,
+        "fileSize": 102400
+      },
+      {
+        "name": "Bulk Creative 2",
+        "type": "image",
+        "format": "jpg",
+        "width": 300,
+        "height": 250,
+        "fileSize": 102400
+      }
+    ]
+  },
+  "searchTestData": {
+    "byName": {
+      "query": "Sample",
+      "expectedResults": 4
+    },
+    "byType": {
+      "query": "image",
+      "expectedResults": 3
+    },
+    "byFormat": {
+      "query": "jpg",
+      "expectedResults": 3
+    }
+  },
+  "updateTestData": {
+    "nameUpdate": {
+      "oldName": "Sample Image Creative",
+      "newName": "Updated Image Creative"
+    },
+    "typeUpdate": {
+      "oldType": "image",
+      "newType": "video"
+    }
+  },
+  "deleteTestData": {
+    "singleDelete": {
+      "name": "Creative to Delete"
+    },
+    "bulkDelete": {
+      "names": ["Creative 1", "Creative 2", "Creative 3"]
+    }
+  },
+  "duplicateTestData": {
+    "exactDuplicate": {
+      "name": "Duplicate Creative",
+      "type": "image",
+      "format": "jpg",
+      "width": 300,
+      "height": 250,
+      "fileSize": 102400
+    }
+  }
+}

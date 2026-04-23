@@ -15,7 +15,9 @@
     "test:synack": "playwright test --config=playwright.config.js",
     "report": "playwright show-report",
     "codegen": "playwright codegen",
-    "codegen:iqm": "playwright codegen https://apitesting.stage.iqm.com/"
+    "codegen:iqm": "playwright codegen https://apitesting.stage.iqm.com/",
+    "record": "node scripts/record-test.js",
+    "record:help": "node scripts/record-test.js help"
   },
   "keywords": [
     "playwright",
