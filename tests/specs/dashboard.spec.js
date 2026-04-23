@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getIQMCredentials } from '../../utils/credentials.js';
+import { getIQMCredentials } from '../utils/credentials.js';
 
 const BASE_URL = 'https://apitesting.stage.iqm.com/';
 const DASHBOARD_URL = `${BASE_URL}dashboard/u/0/#/`;

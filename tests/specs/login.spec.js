@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { getIQMCredentials } from '../../utils/credentials.js';
+import { getIQMCredentials } from '../utils/credentials.js';
 
 test.describe.serial('IQM Login Tests', () => {
   

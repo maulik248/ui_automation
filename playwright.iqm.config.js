@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
 /**
  * IQM Site Playwright Configuration with Native AI Agents
@@ -18,11 +18,13 @@ import { defineConfig } from '@playwright/test';
  */
 
 export default defineConfig({
-  testDir: './tests/iqm-site',
+  testDir: './tests/specs',
   timeout: 60 * 1000,
-  retries: 0,
+  retries: process.env.CI ? 2 : 0,
+  fullyParallel: true,
+  workers: process.env.CI ? 1 : 4,
   use: {
-    headless: false,
+    headless: process.env.HEADED ? false : true,
     baseURL: 'https://apitesting.stage.iqm.com/',
     viewport: { width: 1280, height: 720 },
     screenshot: 'only-on-failure',
@@ -41,5 +43,13 @@ export default defineConfig({
   reporter: [
     ['html', { open: 'never' }],
     ['list'],
+    ['json', { outputFile: 'test-results/results.json' }],
+  ],
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      timeout: 60 * 1000,
+    },
   ],
 });

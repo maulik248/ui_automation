@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { getIQMCredentials } from '../../utils/credentials.js';
+import { getIQMCredentials } from '../utils/credentials.js';
 
 test.describe('Dashboard Exploration and Test Planning', () => {
   
