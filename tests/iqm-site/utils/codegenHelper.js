@@ -1,255 +1,438 @@
 /**
- * Codegen Helper
- * Utilities for recording and generating test code
+ * Codegen Helper Utilities
+ * 
+ * Utilities to make it easier to work with Playwright codegen-generated tests
+ * and integrate them into your framework.
  */
 
-import { chromium } from '@playwright/test';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { expect } from '@playwright/test';
+import { getIQMCredentials } from './testData.js';
 
 /**
- * Start recording with codegen
- * Records user interactions and generates test code
+ * Login Helper
+ * 
+ * Handles the complete login flow with flexible locators
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {Object} options - Login options
+ * @param {string} options.username - Username (optional, uses config if not provided)
+ * @param {string} options.password - Password (optional, uses config if not provided)
+ * @param {number} options.timeout - Timeout in ms (default: 30000)
+ * 
+ * @example
+ * await loginHelper(page);
+ * await loginHelper(page, { username: 'custom@email.com' });
  */
-export async function startRecording(options = {}) {
-  const {
-    url = 'https://apitesting.stage.iqm.com/',
-    outputFile = 'recorded-test.spec.js',
-    headless = false,
-    viewport = { width: 1280, height: 720 },
-  } = options;
+export async function loginHelper(page, options = {}) {
+  const creds = getIQMCredentials();
+  const username = options.username || creds.username;
+  const password = options.password || creds.password;
+  const timeout = options.timeout || 30000;
 
-  console.log('\n🎬 Starting Playwright Codegen Recording...');
-  console.log(`📍 URL: ${url}`);
-  console.log(`💾 Output: ${outputFile}`);
-  console.log('⏹️  Press Ctrl+C to stop recording\n');
-
-  const browser = await chromium.launch({ headless });
-  const context = await browser.newContext({ viewport });
-  const page = await context.newPage();
-
-  // Start codegen
-  await page.goto(url);
-
-  // Use Playwright's built-in codegen
-  const { codegen } = await import('@playwright/test');
-  
-  // Record interactions
-  await new Promise((resolve) => {
-    process.on('SIGINT', resolve);
-  });
-
-  await context.close();
-  await browser.close();
-
-  console.log('\n✅ Recording stopped');
-}
-
-/**
- * Generate test from recorded actions
- */
-export async function generateTestFromRecording(recordedActions, testName = 'Generated Test') {
-  const testCode = `
-import { test, expect } from '@playwright/test';
-
-test('${testName}', async ({ page }) => {
-${recordedActions.map(action => `  ${action}`).join('\n')}
-});
-`;
-
-  return testCode;
-}
-
-/**
- * Save generated test to file
- */
-export function saveGeneratedTest(testCode, filename = 'generated-test.spec.js') {
-  const testDir = path.join(__dirname, '../specs');
-  const filePath = path.join(testDir, filename);
-
-  // Ensure directory exists
-  if (!fs.existsSync(testDir)) {
-    fs.mkdirSync(testDir, { recursive: true });
+  try {
+    // Navigate to app
+    await page.goto('https://apitesting.stage.iqm.com/');
+    
+    // Fill email with flexible locators
+    const emailInput = page.locator('input[type="email"]')
+      .or(page.locator('input[name*="email"]'))
+      .or(page.locator('input[name*="username"]'))
+      .first();
+    
+    await emailInput.fill(username, { timeout });
+    
+    // Click Next button with flexible locators
+    const nextButton = page.locator('button[type="submit"]')
+      .or(page.getByRole('button', { name: /next|continue/i }))
+      .or(page.locator('button:has-text("Next")'))
+      .first();
+    
+    await nextButton.click({ timeout });
+    
+    // Wait for password field
+    await page.waitForLoadState('networkidle');
+    
+    // Fill password
+    const passwordInput = page.locator('input[type="password"]')
+      .or(page.locator('input[name*="password"]'))
+      .first();
+    
+    await passwordInput.fill(password, { timeout });
+    
+    // Click login button
+    const loginButton = page.locator('button[type="submit"]')
+      .or(page.getByRole('button', { name: /login|sign in/i }))
+      .first();
+    
+    await loginButton.click({ timeout });
+    
+    // Verify successful login
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/dashboard|home/i);
+    
+    return true;
+  } catch (error) {
+    console.error('Login failed:', error.message);
+    throw error;
   }
-
-  fs.writeFileSync(filePath, testCode, 'utf-8');
-  console.log(`✅ Test saved to: ${filePath}`);
-
-  return filePath;
 }
 
 /**
- * Record and save test in one go
+ * Find Element with Fallbacks
+ * 
+ * Tries multiple locator strategies to find an element
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string} text - Text to search for
+ * @param {string} type - Element type (button, input, link, etc.)
+ * @param {Object} options - Additional options
+ * 
+ * @example
+ * const button = await findElement(page, 'Submit', 'button');
+ * const input = await findElement(page, 'Email', 'input');
  */
-export async function recordAndSaveTest(options = {}) {
-  const {
-    url = 'https://apitesting.stage.iqm.com/',
-    testName = 'Recorded Test',
-    outputFile = 'recorded-test.spec.js',
-  } = options;
-
-  console.log('\n🎬 Starting Playwright Codegen...');
-  console.log(`📍 URL: ${url}`);
-  console.log(`📝 Test Name: ${testName}`);
-  console.log(`💾 Output: ${outputFile}\n`);
-
-  // Use Playwright's codegen command
-  const { spawn } = await import('child_process');
+export async function findElement(page, text, type = 'button', options = {}) {
+  const timeout = options.timeout || 5000;
   
-  return new Promise((resolve, reject) => {
-    const codegen = spawn('npx', [
-      'playwright',
-      'codegen',
-      '--output',
-      path.join(__dirname, '../specs', outputFile),
-      url,
-    ]);
-
-    codegen.stdout.on('data', (data) => {
-      console.log(`📝 ${data}`);
-    });
-
-    codegen.stderr.on('data', (data) => {
-      console.error(`❌ ${data}`);
-    });
-
-    codegen.on('close', (code) => {
-      if (code === 0) {
-        console.log(`\n✅ Test saved to: tests/iqm-site/specs/${outputFile}`);
-        resolve(path.join(__dirname, '../specs', outputFile));
-      } else {
-        reject(new Error(`Codegen exited with code ${code}`));
-      }
-    });
-
-    // Handle Ctrl+C gracefully
-    process.on('SIGINT', () => {
-      codegen.kill();
-      resolve(path.join(__dirname, '../specs', outputFile));
-    });
-  });
-}
-
-/**
- * Convert recorded test to use Page Object Model
- */
-export function convertToPageObjectModel(testCode, pageObjectName = 'CreativePage') {
-  // Replace direct page interactions with POM methods
-  let converted = testCode;
-
-  // Example conversions
-  const conversions = [
-    {
-      pattern: /await page\.getByRole\('button', \{ name: \/create\/i \}\)\.click\(\);/g,
-      replacement: `await ${pageObjectName.toLowerCase()}.clickAddNew();`,
-    },
-    {
-      pattern: /await page\.getByLabel\(\/name\/i\)\.fill\('(.+?)'\);/g,
-      replacement: `await ${pageObjectName.toLowerCase()}.fillCreativeForm({ name: '$1' });`,
-    },
+  const locators = [
+    // Exact text match
+    page.locator(`${type}:has-text("${text}")`),
+    // Partial text match
+    page.locator(`${type}:has-text("${text.substring(0, 3)}")`),
+    // Role-based
+    page.getByRole(type === 'button' ? 'button' : 'textbox', { name: new RegExp(text, 'i') }),
+    // Placeholder
+    page.locator(`${type}[placeholder*="${text}"]`),
+    // Label
+    page.locator(`label:has-text("${text}") ~ ${type}`),
   ];
+  
+  for (const locator of locators) {
+    try {
+      if (await locator.first().isVisible({ timeout: 1000 })) {
+        return locator.first();
+      }
+    } catch (e) {
+      // Continue to next locator
+    }
+  }
+  
+  throw new Error(`Could not find ${type} with text "${text}"`);
+}
 
-  conversions.forEach(({ pattern, replacement }) => {
-    converted = converted.replace(pattern, replacement);
+/**
+ * Fill Form Field
+ * 
+ * Fills a form field with flexible locator matching
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string} label - Field label or placeholder
+ * @param {string} value - Value to fill
+ * @param {Object} options - Additional options
+ * 
+ * @example
+ * await fillField(page, 'Email', 'user@example.com');
+ * await fillField(page, 'Password', 'password123');
+ */
+export async function fillField(page, label, value, options = {}) {
+  const timeout = options.timeout || 5000;
+  
+  const locators = [
+    // By placeholder
+    page.locator(`input[placeholder*="${label}"]`),
+    // By label
+    page.locator(`label:has-text("${label}") ~ input`),
+    // By name
+    page.locator(`input[name*="${label.toLowerCase()}"]`),
+    // By aria-label
+    page.locator(`input[aria-label*="${label}"]`),
+  ];
+  
+  for (const locator of locators) {
+    try {
+      if (await locator.first().isVisible({ timeout: 1000 })) {
+        await locator.first().fill(value, { timeout });
+        return;
+      }
+    } catch (e) {
+      // Continue to next locator
+    }
+  }
+  
+  throw new Error(`Could not find field with label "${label}"`);
+}
+
+/**
+ * Click Button
+ * 
+ * Clicks a button with flexible locator matching
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string} text - Button text
+ * @param {Object} options - Additional options
+ * 
+ * @example
+ * await clickButton(page, 'Submit');
+ * await clickButton(page, 'Login');
+ */
+export async function clickButton(page, text, options = {}) {
+  const timeout = options.timeout || 5000;
+  
+  const button = await findElement(page, text, 'button', { timeout });
+  await button.click({ timeout });
+}
+
+/**
+ * Wait for Navigation
+ * 
+ * Waits for page to navigate to a specific URL pattern
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {RegExp|string} urlPattern - URL pattern to match
+ * @param {Object} options - Additional options
+ * 
+ * @example
+ * await waitForNavigation(page, /dashboard/);
+ * await waitForNavigation(page, 'dashboard');
+ */
+export async function waitForNavigation(page, urlPattern, options = {}) {
+  const timeout = options.timeout || 30000;
+  
+  const pattern = typeof urlPattern === 'string' 
+    ? new RegExp(urlPattern, 'i') 
+    : urlPattern;
+  
+  await page.waitForLoadState('networkidle');
+  await expect(page).toHaveURL(pattern, { timeout });
+}
+
+/**
+ * Upload File
+ * 
+ * Uploads a file to a file input
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string} filePath - Path to file to upload
+ * @param {Object} options - Additional options
+ * 
+ * @example
+ * await uploadFile(page, 'tests/testdata/image.png');
+ */
+export async function uploadFile(page, filePath, options = {}) {
+  const timeout = options.timeout || 5000;
+  
+  const fileInput = page.locator('input[type="file"]').first();
+  
+  if (!await fileInput.isVisible({ timeout: 1000 })) {
+    throw new Error('File input not found');
+  }
+  
+  await fileInput.setInputFiles(filePath, { timeout });
+}
+
+/**
+ * Select Dropdown Option
+ * 
+ * Selects an option from a dropdown
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string} dropdownLabel - Dropdown label
+ * @param {string} optionText - Option text to select
+ * @param {Object} options - Additional options
+ * 
+ * @example
+ * await selectDropdown(page, 'Status', 'Active');
+ */
+export async function selectDropdown(page, dropdownLabel, optionText, options = {}) {
+  const timeout = options.timeout || 5000;
+  
+  // Find dropdown
+  const dropdown = page.locator(`select, [role="combobox"]`).first();
+  
+  if (!await dropdown.isVisible({ timeout: 1000 })) {
+    throw new Error(`Dropdown "${dropdownLabel}" not found`);
+  }
+  
+  // Click to open
+  await dropdown.click({ timeout });
+  
+  // Select option
+  const option = page.locator(`[role="option"]:has-text("${optionText}")`)
+    .or(page.locator(`.dropdown-item:has-text("${optionText}")`))
+    .first();
+  
+  if (!await option.isVisible({ timeout: 1000 })) {
+    throw new Error(`Option "${optionText}" not found`);
+  }
+  
+  await option.click({ timeout });
+}
+
+/**
+ * Verify Element Text
+ * 
+ * Verifies that an element contains specific text
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string} text - Text to verify
+ * @param {Object} options - Additional options
+ * 
+ * @example
+ * await verifyText(page, 'Welcome');
+ * await verifyText(page, 'Error message');
+ */
+export async function verifyText(page, text, options = {}) {
+  const timeout = options.timeout || 5000;
+  
+  const element = page.locator(`text=${text}`).first();
+  await expect(element).toBeVisible({ timeout });
+}
+
+/**
+ * Wait for Element
+ * 
+ * Waits for an element to be visible
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string} selector - Element selector or text
+ * @param {Object} options - Additional options
+ * 
+ * @example
+ * await waitForElement(page, 'button:has-text("Submit")');
+ */
+export async function waitForElement(page, selector, options = {}) {
+  const timeout = options.timeout || 5000;
+  
+  const element = page.locator(selector).first();
+  await expect(element).toBeVisible({ timeout });
+}
+
+/**
+ * Get Element Text
+ * 
+ * Gets the text content of an element
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string} selector - Element selector
+ * 
+ * @example
+ * const text = await getElementText(page, 'h1');
+ */
+export async function getElementText(page, selector) {
+  const element = page.locator(selector).first();
+  return await element.textContent();
+}
+
+/**
+ * Take Screenshot
+ * 
+ * Takes a screenshot with a descriptive name
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string} name - Screenshot name
+ * @param {Object} options - Additional options
+ * 
+ * @example
+ * await takeScreenshot(page, 'login-page');
+ */
+export async function takeScreenshot(page, name, options = {}) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `${name}-${timestamp}.png`;
+  const path = `test-results/screenshots/${filename}`;
+  
+  await page.screenshot({ path, ...options });
+  console.log(`Screenshot saved: ${path}`);
+}
+
+/**
+ * Retry Action
+ * 
+ * Retries an action multiple times
+ * 
+ * @param {Function} action - Action to retry
+ * @param {Object} options - Retry options
+ * 
+ * @example
+ * await retryAction(async () => {
+ *   await clickButton(page, 'Submit');
+ * }, { maxRetries: 3, delay: 1000 });
+ */
+export async function retryAction(action, options = {}) {
+  const maxRetries = options.maxRetries || 3;
+  const delay = options.delay || 1000;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await action();
+    } catch (error) {
+      if (i === maxRetries - 1) {
+        throw error;
+      }
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
+/**
+ * Handle Alert
+ * 
+ * Handles browser alerts
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string} action - 'accept' or 'dismiss'
+ * 
+ * @example
+ * page.on('dialog', dialog => handleAlert(page, 'accept'));
+ */
+export async function handleAlert(page, action = 'accept') {
+  page.on('dialog', async dialog => {
+    if (action === 'accept') {
+      await dialog.accept();
+    } else {
+      await dialog.dismiss();
+    }
   });
-
-  return converted;
 }
 
 /**
- * Add custom assertions to generated test
+ * Wait for API Response
+ * 
+ * Waits for a specific API response
+ * 
+ * @param {Page} page - Playwright page object
+ * @param {string|RegExp} urlPattern - URL pattern to match
+ * @param {Function} action - Action that triggers the request
+ * 
+ * @example
+ * await waitForAPIResponse(page, /api\/creatives/, async () => {
+ *   await clickButton(page, 'Create');
+ * });
  */
-export function addAssertions(testCode, assertions = []) {
-  let code = testCode;
-
-  // Add import for custom assertions
-  if (assertions.length > 0) {
-    const assertionImport = `import { ${assertions.join(', ')} } from '../utils/assertions.js';\n`;
-    code = code.replace(
-      "import { test, expect } from '@playwright/test';",
-      `import { test, expect } from '@playwright/test';\n${assertionImport}`
-    );
-  }
-
-  return code;
+export async function waitForAPIResponse(page, urlPattern, action) {
+  const responsePromise = page.waitForResponse(response => {
+    const url = response.url();
+    return typeof urlPattern === 'string' 
+      ? url.includes(urlPattern) 
+      : urlPattern.test(url);
+  });
+  
+  await action();
+  return await responsePromise;
 }
 
-/**
- * Format generated test code
- */
-export function formatTestCode(testCode) {
-  // Add proper formatting
-  let formatted = testCode;
-
-  // Add spacing
-  formatted = formatted.replace(/\n\n+/g, '\n\n');
-
-  // Add comments
-  formatted = formatted.replace(
-    /test\('(.+?)',/,
-    `/**\n * Generated test: $1\n * Auto-generated by Playwright Codegen\n */\ntest('$1',`
-  );
-
-  return formatted;
-}
-
-/**
- * List all recorded tests
- */
-export function listRecordedTests() {
-  const specsDir = path.join(__dirname, '../specs');
-
-  if (!fs.existsSync(specsDir)) {
-    return [];
-  }
-
-  const files = fs.readdirSync(specsDir);
-  return files.filter(file => file.endsWith('.spec.js'));
-}
-
-/**
- * Get recorded test content
- */
-export function getRecordedTestContent(filename) {
-  const filePath = path.join(__dirname, '../specs', filename);
-
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Test file not found: ${filePath}`);
-  }
-
-  return fs.readFileSync(filePath, 'utf-8');
-}
-
-/**
- * Delete recorded test
- */
-export function deleteRecordedTest(filename) {
-  const filePath = path.join(__dirname, '../specs', filename);
-
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Test file not found: ${filePath}`);
-  }
-
-  fs.unlinkSync(filePath);
-  console.log(`✅ Deleted: ${filename}`);
-}
-
-/**
- * Export all utilities
- */
 export default {
-  startRecording,
-  generateTestFromRecording,
-  saveGeneratedTest,
-  recordAndSaveTest,
-  convertToPageObjectModel,
-  addAssertions,
-  formatTestCode,
-  listRecordedTests,
-  getRecordedTestContent,
-  deleteRecordedTest,
+  loginHelper,
+  findElement,
+  fillField,
+  clickButton,
+  waitForNavigation,
+  uploadFile,
+  selectDropdown,
+  verifyText,
+  waitForElement,
+  getElementText,
+  takeScreenshot,
+  retryAction,
+  handleAlert,
+  waitForAPIResponse,
 };

@@ -1,5 +1,5 @@
 {
-  "name": "synack-playwright-framework",
+  "name": "playwright-framework",
   "version": "2.0.0",
   "description": "AI-Enhanced Playwright Testing Framework with Smart Locators, Self-Healing Tests, and Auto-Generation",
   "main": "index.js",
@@ -17,7 +17,9 @@
     "codegen": "playwright codegen",
     "codegen:iqm": "playwright codegen https://apitesting.stage.iqm.com/",
     "record": "node scripts/record-test.js",
-    "record:help": "node scripts/record-test.js help"
+    "record:help": "node scripts/record-test.js help",
+    "dashboard": "node test-runner-server.js",
+    "dashboard:dev": "nodemon test-runner-server.js"
   },
   "keywords": [
     "playwright",
@@ -28,11 +30,14 @@
     "test-generation",
     "qa"
   ],
-  "author": "Maulik Shah (Extended from Nadya Koltakova's framework)",
+  "author": "Maulik Shah",
   "license": "ISC",
   "devDependencies": {
+    "@axe-core/playwright": "^4.8.0",
     "@playwright/test": "^1.57.0",
-    "@axe-core/playwright": "^4.8.0"
+    "express": "^4.22.1",
+    "nodemon": "^3.1.14",
+    "ws": "^8.20.0"
   },
   "dependencies": {
     "dotenv": "^16.3.1"

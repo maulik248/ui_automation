@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playwright Test Runner Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .sidebar h2 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .test-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .test-item {
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            font-size: 13px;
+        }
+
+        .test-item:hover {
+            background: #e8e8e8;
+            transform: translateX(5px);
+        }
+
+        .test-item.selected {
+            background: #667eea;
+            color: white;
+            border-left-color: #764ba2;
+        }
+
+        .test-item.passed {
+            border-left-color: #10b981;
+        }
+
+        .test-item.failed {
+            border-left-color: #ef4444;
+        }
+
+        .test-item.running {
+            border-left-color: #f59e0b;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .controls {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e5e5e5;
+            color: #333;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #d4d4d4;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .main-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-size: 18px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-idle {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .status-running {
+            background: #fbbf24;
+            color: #78350f;
+        }
+
+        .status-passed {
+            background: #86efac;
+            color: #166534;
+        }
+
+        .status-failed {
+            background: #fca5a5;
+            color: #7f1d1d;
+        }
+
+        .panel-content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid #e5e5e5;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            color: #666;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            color: #333;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .test-details {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .detail-value {
+            color: #333;
+            font-size: 13px;
+        }
+
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .screenshot-item {
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .screenshot-item:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .screenshot-preview {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+
+        .screenshot-label {
+            padding: 8px;
+            background: #f9fafb;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+
+        .video-container {
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .logs-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        .log-line {
+            margin-bottom: 4px;
+        }
+
+        .log-error {
+            color: #f48771;
+        }
+
+        .log-warning {
+            color: #dcdcaa;
+        }
+
+        .log-success {
+            color: #89d185;
+        }
+
+        .log-info {
+            color: #9cdcfe;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e5e5e5;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 3px solid #667eea;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .screenshot-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎭 Playwright Test Runner</h1>
+            <p class="subtitle">Run tests, view reports, and analyze results in real-time</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <h2>Test Suites</h2>
+                <div class="test-list" id="testList"></div>
+
+                <div class="controls">
+                    <button class="btn btn-primary" id="runAllBtn" onclick="runAllTests()">
+                        ▶ Run All Tests
+                    </button>
+                    <button class="btn btn-secondary" id="stopBtn" onclick="stopTests()" disabled>
+                        ⏹ Stop Tests
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearResults()">
+                        🗑 Clear Results
+                    </button>
+                </div>
+
+                <div class="filter-group" style="margin-top: 20px;">
+                    <label>Filter by Status</label>
+                    <select id="statusFilter" onchange="filterTests()">
+                        <option value="">All Tests</option>
+                        <option value="passed">Passed</option>
+                        <option value="failed">Failed</option>
+                        <option value="running">Running</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Main Panel -->
+            <div class="main-panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 id="panelTitle">Select a test to view details</h2>
+                    </div>
+                    <span class="status-badge status-idle" id="statusBadge">Idle</span>
+                </div>
+
+                <div class="panel-content">
+                    <!-- Stats -->
+                    <div class="stats" id="statsContainer" style="display: none;">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalTests">0</div>
+                            <div class="stat-label">Total Tests</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="passedTests">0</div>
+                            <div class="stat-label">Passed</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="failedTests">0</div>
+                            <div class="stat-label">Failed</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="duration">0s</div>
+                            <div class="stat-label">Duration</div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab('overview')">📋 Overview</div>
+                        <div class="tab" onclick="switchTab('screenshots')">📸 Screenshots</div>
+                        <div class="tab" onclick="switchTab('video')">🎬 Video</div>
+                        <div class="tab" onclick="switchTab('logs')">📝 Logs</div>
+                    </div>
+
+                    <!-- Overview Tab -->
+                    <div id="overview" class="tab-content active">
+                        <div id="overviewContent" class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <p>Select a test from the list to view details</p>
+                        </div>
+                    </div>
+
+                    <!-- Screenshots Tab -->
+                    <div id="screenshots" class="tab-content">
+                        <div id="screenshotsContent" class="empty-state">
+                            <div class="empty-state-icon">📸</div>
+                            <p>No screenshots available</p>
+                        </div>
+                    </div>
+
+                    <!-- Video Tab -->
+                    <div id="video" class="tab-content">
+                        <div id="videoContent" class="empty-state">
+                            <div class="empty-state-icon">🎬</div>
+                            <p>No video available</p>
+                        </div>
+                    </div>
+
+                    <!-- Logs Tab -->
+                    <div id="logs" class="tab-content">
+                        <div id="logsContent" class="empty-state">
+                            <div class="empty-state-icon">📝</div>
+                            <p>No logs available</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal" id="imageModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="imageModalTitle">Screenshot</h3>
+                <button class="close-btn" onclick="closeModal('imageModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <img id="modalImage" style="width: 100%; height: auto;">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let testResults = {};
+        let selectedTest = null;
+        let isRunning = false;
+        let allTests = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTests();
+            setupWebSocket();
+        });
+
+        // Load available tests
+        async function loadTests() {
+            try {
+                const response = await fetch('/api/tests');
+                allTests = await response.json();
+                renderTestList();
+            } catch (error) {
+                console.error('Failed to load tests:', error);
+                showNotification('Failed to load tests', 'error');
+            }
+        }
+
+        // Render test list
+        function renderTestList() {
+            const testList = document.getElementById('testList');
+            testList.innerHTML = '';
+
+            allTests.forEach(test => {
+                const result = testResults[test.id];
+                const div = document.createElement('div');
+                div.className = 'test-item';
+                
+                if (result) {
+                    div.classList.add(result.status);
+                }
+                if (selectedTest === test.id) {
+                    div.classList.add('selected');
+                }
+
+                div.textContent = test.name;
+                div.onclick = () => selectTest(test.id, test);
+                testList.appendChild(div);
+            });
+        }
+
+        // Select test
+        function selectTest(testId, test) {
+            selectedTest = testId;
+            renderTestList();
+            displayTestDetails(test);
+        }
+
+        // Display test details
+        function displayTestDetails(test) {
+            const result = testResults[test.id];
+            const title = document.getElementById('panelTitle');
+            title.textContent = test.name;
+
+            if (!result) {
+                document.getElementById('overviewContent').innerHTML = `
+                    <div class="test-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Status</span>
+                            <span class="detail-value">Not run</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">File</span>
+                            <span class="detail-value">${test.file}</span>
+                        </div>
+                    </div>
+                `;
+                clearTab('screenshots');
+                clearTab('video');
+                clearTab('logs');
+                return;
+            }
+
+            // Overview
+            const overviewHTML = `
+                <div class="test-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Status</span>
+                        <span class="detail-value">
+                            <span class="status-badge status-${result.status}">${result.status.toUpperCase()}</span>
+                        </span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Duration</span>
+                        <span class="detail-value">${result.duration}ms</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">File</span>
+                        <span class="detail-value">${test.file}</span>
+                    </div>
+                    ${result.error ? `
+                        <div class="detail-row">
+                            <span class="detail-label">Error</span>
+                            <span class="detail-value" style="color: #ef4444;">${result.error}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            document.getElementById('overviewContent').innerHTML = overviewHTML;
+
+            // Screenshots
+            if (result.screenshots && result.screenshots.length > 0) {
+                const screenshotsHTML = `
+                    <div class="screenshot-grid">
+                        ${result.screenshots.map((screenshot, idx) => `
+                            <div class="screenshot-item" onclick="openImageModal('${screenshot}', 'Screenshot ${idx + 1}')">
+                                <img src="${screenshot}" class="screenshot-preview" alt="Screenshot ${idx + 1}">
+                                <div class="screenshot-label">Screenshot ${idx + 1}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                document.getElementById('screenshotsContent').innerHTML = screenshotsHTML;
+            } else {
+                clearTab('screenshots');
+            }
+
+            // Video
+            if (result.video) {
+                const videoHTML = `
+                    <div class="video-container">
+                        <video controls>
+                            <source src="${result.video}" type="video/webm">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                `;
+                document.getElementById('videoContent').innerHTML = videoHTML;
+            } else {
+                clearTab('video');
+            }
+
+            // Logs
+            if (result.logs && result.logs.length > 0) {
+                const logsHTML = `
+                    <div class="logs-container">
+                        ${result.logs.map(log => `
+                            <div class="log-line log-${log.level}">${escapeHtml(log.message)}</div>
+                        `).join('')}
+                    </div>
+                `;
+                document.getElementById('logsContent').innerHTML = logsHTML;
+            } else {
+                clearTab('logs');
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            document.getElementById('runAllBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            updateStatus('running');
+
+            try {
+                const response = await fetch('/api/run-tests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tests: allTests.map(t => t.id) })
+                });
+
+                if (!response.ok) throw new Error('Failed to start tests');
+                showNotification('Tests started', 'success');
+            } catch (error) {
+                console.error('Error running tests:', error);
+                showNotification('Failed to start tests', 'error');
+                isRunning = false;
+                document.getElementById('runAllBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                updateStatus('idle');
+            }
+        }
+
+        // Stop tests
+        async function stopTests() {
+            try {
+                await fetch('/api/stop-tests', { method: 'POST' });
+                showNotification('Tests stopped', 'info');
+            } catch (error) {
+                console.error('Error stopping tests:', error);
+            }
+        }
+
+        // Clear results
+        function clearResults() {
+            testResults = {};
+            selectedTest = null;
+            renderTestList();
+            document.getElementById('overviewContent').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>Select a test from the list to view details</p>
+                </div>
+            `;
+            updateStats();
+        }
+
+        // Filter tests
+        function filterTests() {
+            const filter = document.getElementById('statusFilter').value;
+            const testItems = document.querySelectorAll('.test-item');
+            
+            testItems.forEach(item => {
+                if (!filter) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = item.classList.contains(filter) ? 'block' : 'none';
+                }
+            });
+        }
+
+        // Switch tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Clear tab content
+        function clearTab(tabName) {
+            document.getElementById(tabName + 'Content').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>No ${tabName} available</p>
+                </div>
+            `;
+        }
+
+        // Open image modal
+        function openImageModal(src, title) {
+            document.getElementById('imageModalTitle').textContent = title;
+            document.getElementById('modalImage').src = src;
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Update status badge
+        function updateStatus(status) {
+            const badge = document.getElementById('statusBadge');
+            badge.className = `status-badge status-${status}`;
+            badge.textContent = status.toUpperCase();
+        }
+
+        // Update stats
+        function updateStats() {
+            const results = Object.values(testResults);
+            const passed = results.filter(r => r.status === 'passed').length;
+            const failed = results.filter(r => r.status === 'failed').length;
+            const total = results.length;
+
+            document.getElementById('totalTests').textContent = total;
+            document.getElementById('passedTests').textContent = passed;
+            document.getElementById('failedTests').textContent = failed;
+
+            if (total > 0) {
+                document.getElementById('statsContainer').style.display = 'grid';
+            }
+        }
+
+        // Setup WebSocket for real-time updates
+        function setupWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'test-result') {
+                    testResults[data.testId] = data.result;
+                    renderTestList();
+                    updateStats();
+                    
+                    if (selectedTest === data.testId) {
+                        const test = allTests.find(t => t.id === data.testId);
+                        displayTestDetails(test);
+                    }
+                } else if (data.type === 'test-complete') {
+                    isRunning = false;
+                    document.getElementById('runAllBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                    updateStatus('idle');
+                    showNotification('All tests completed', 'success');
+                } else if (data.type === 'test-error') {
+                    showNotification(`Test error: ${data.message}`, 'error');
+                }
+            };
+
+            ws.onerror = () => {
+                console.error('WebSocket error');
+                setTimeout(setupWebSocket, 3000);
+            };
+
+            ws.onclose = () => {
+                setTimeout(setupWebSocket, 3000);
+            };
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showNotification(message, type = 'info') {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Close modal on outside click
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
